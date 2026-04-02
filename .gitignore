@@ -41,3 +41,11 @@ yarn-error.log*
 next-env.d.ts
 
 /app/generated/prisma
+
+# local db
+prisma/dev.db
+prisma/dev.db-shm
+prisma/dev.db-wal
+
+# generated prisma client
+app/generated/
