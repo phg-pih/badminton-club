@@ -1,16 +1,27 @@
 export const dynamic = "force-dynamic";
 import prisma from "@/lib/prisma";
 import Link from "next/link";
+import ReactMarkdown from "react-markdown";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-export default async function SessionsPage() {
-  const sessions = await prisma.session.findMany({
-    orderBy: { date: "desc" },
-    include: {
-      _count: { select: { attendances: true, guests: true } },
-    },
-  });
+const PAGE_SIZE = 4;
+
+export default async function SessionsPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  const { page } = await searchParams;
+  const currentPage = Math.max(1, Number(page) || 1);
+
+  const [sessions, total] = await Promise.all([
+    prisma.session.findMany({
+      orderBy: { date: "desc" },
+      include: { _count: { select: { attendances: true, guests: true } } },
+      skip: (currentPage - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    }),
+    prisma.session.count(),
+  ]);
+
+  const totalPages = Math.ceil(total / PAGE_SIZE);
 
   const vntNow = new Date(Date.now() + 7 * 60 * 60 * 1000);
   const todayVNT = vntNow.toISOString().slice(0, 10);
@@ -33,32 +44,52 @@ export default async function SessionsPage() {
                 const total = s.courtCost + s.shuttleCost + s.waterCost;
                 const perPerson = s._count.attendances > 0 ? total / s._count.attendances : 0;
                 return (
-                  <Link key={s.id} href={`/sessions/${s.id}`}
-                    className={`flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 ${isToday ? "border-green-400 bg-green-50 hover:bg-green-50" : "bg-white"}`}>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium">
-                          {new Date(s.date).toLocaleDateString("vi-VN", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
-                        </p>
-                        {isToday && <Badge className="text-xs bg-green-500">Hôm nay</Badge>}
+                  <div key={s.id} className={`border rounded-lg ${isToday ? "border-green-400 bg-green-50" : "bg-white"}`}>
+                    <Link href={`/sessions/${s.id}`}
+                      className="flex items-center justify-between p-3 hover:bg-black/5 rounded-lg">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">
+                            {new Date(s.date).toLocaleDateString("vi-VN", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+                          </p>
+                          {isToday && <Badge className="text-xs bg-green-500">Hôm nay</Badge>}
+                        </div>
+                        {total > 0 && (
+                          <p className="text-sm text-gray-500">
+                            Tổng: {total.toLocaleString("vi-VN")}đ
+                            {s._count.attendances > 0 && ` — ${perPerson.toLocaleString("vi-VN", { maximumFractionDigits: 0 })}đ/người`}
+                          </p>
+                        )}
                       </div>
-                      {s.notes && <p className="text-sm text-gray-400">{s.notes}</p>}
-                      {total > 0 && (
-                        <p className="text-sm text-gray-500">
-                          Tổng: {total.toLocaleString("vi-VN")}đ
-                          {s._count.attendances > 0 && ` — ${perPerson.toLocaleString("vi-VN", { maximumFractionDigits: 0 })}đ/người`}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      <Badge variant="secondary">{s._count.attendances} thành viên</Badge>
-                      {s._count.guests > 0 && <Badge variant="outline">{s._count.guests} vãng lai</Badge>}
-                    </div>
-                  </Link>
+                      <div className="flex gap-2">
+                        <Badge variant="secondary">{s._count.attendances} thành viên</Badge>
+                        {s._count.guests > 0 && <Badge variant="outline">{s._count.guests} vãng lai</Badge>}
+                      </div>
+                    </Link>
+                    {s.notes && (
+                      <div className="px-3 pb-3 text-sm text-gray-500 prose prose-sm prose-gray max-w-none [&_a]:text-blue-500 [&_a]:underline">
+                        <ReactMarkdown components={{ a: ({ ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" /> }}>
+                          {s.notes}
+                        </ReactMarkdown>
+                      </div>
+                    )}
+                  </div>
                 );
               })}
               {sessions.length === 0 && <p className="text-center text-gray-400 py-4">Chưa có buổi đánh nào</p>}
             </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                {currentPage > 1
+                  ? <Link href={`/sessions?page=${currentPage - 1}`} className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 h-8 text-sm font-medium hover:bg-accent hover:text-accent-foreground">← Trước</Link>
+                  : <span className="inline-flex items-center justify-center rounded-md border px-3 h-8 text-sm font-medium text-gray-300 cursor-not-allowed">← Trước</span>}
+                <span className="text-sm text-gray-500">Trang {currentPage} / {totalPages}</span>
+                {currentPage < totalPages
+                  ? <Link href={`/sessions?page=${currentPage + 1}`} className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 h-8 text-sm font-medium hover:bg-accent hover:text-accent-foreground">Sau →</Link>
+                  : <span className="inline-flex items-center justify-center rounded-md border px-3 h-8 text-sm font-medium text-gray-300 cursor-not-allowed">Sau →</span>}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
