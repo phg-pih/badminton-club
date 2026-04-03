@@ -107,7 +107,7 @@ export function AttendanceClient({ session: initial, members, isAdmin = false }:
           <p className="text-3xl mb-2">🏸</p>
           <h1 className="text-xl font-bold">CLB Cầu Lông</h1>
           <p className="text-gray-600">{dateStr}</p>
-          {session.notes && <p className="text-sm text-gray-500 mt-1">{session.notes}</p>}
+          {session.notes && <p className="text-sm text-gray-500 mt-1 whitespace-pre-line text-center">{session.notes}</p>}
         </div>
 
         {total > 0 && (
