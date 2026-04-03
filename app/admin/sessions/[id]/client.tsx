@@ -201,8 +201,8 @@ export function AdminSessionClient({ id }: { id: string }) {
                 </div>
               </div>
               <div className="space-y-1">
-                <Label>Ghi chú</Label>
-                <Textarea rows={2} placeholder="Địa điểm, thông tin thêm..." value={infoForm.notes} onChange={e => setInfoForm(f => ({ ...f, notes: e.target.value }))} />
+                <Label>Ghi chú <span className="text-xs text-gray-400 font-normal">(hỗ trợ Markdown: **đậm**, *nghiêng*, - danh sách)</span></Label>
+                <Textarea rows={3} placeholder="Địa điểm, thông tin thêm..." value={infoForm.notes} onChange={e => setInfoForm(f => ({ ...f, notes: e.target.value }))} />
               </div>
               <div className="flex gap-2">
                 <Button type="submit" size="sm" disabled={savingInfo}>{savingInfo ? "Đang lưu..." : "Lưu"}</Button>

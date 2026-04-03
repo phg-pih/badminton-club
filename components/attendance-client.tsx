@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -107,7 +108,11 @@ export function AttendanceClient({ session: initial, members, isAdmin = false }:
           <p className="text-3xl mb-2">🏸</p>
           <h1 className="text-xl font-bold">CLB Cầu Lông</h1>
           <p className="text-gray-600">{dateStr}</p>
-          {session.notes && <p className="text-sm text-gray-500 mt-1 whitespace-pre-line text-center">{session.notes}</p>}
+          {session.notes && (
+            <div className="text-sm text-gray-500 mt-1 prose prose-sm prose-gray max-w-none text-center [&>*]:text-center">
+              <ReactMarkdown components={{ a: ({ ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" /> }}>{session.notes}</ReactMarkdown>
+            </div>
+          )}
         </div>
 
         {total > 0 && (
