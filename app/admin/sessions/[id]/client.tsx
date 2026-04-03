@@ -29,6 +29,8 @@ export function AdminSessionClient({ id }: { id: string }) {
   const [togglingPayment, setTogglingPayment] = useState<string | null>(null);
   const [togglingGuestPayment, setTogglingGuestPayment] = useState<string | null>(null);
   const [togglingPaymentReady, setTogglingPaymentReady] = useState(false);
+  const [copying, setCopying] = useState(false);
+  const [copyDate, setCopyDate] = useState("");
 
   useEffect(() => {
     fetch(`/api/sessions/${id}`)
@@ -125,6 +127,32 @@ export function AdminSessionClient({ id }: { id: string }) {
     }
   }
 
+  async function copySession(e: React.FormEvent) {
+    e.preventDefault();
+    if (!session || !copyDate) return;
+    setCopying(true);
+    try {
+      const res = await fetch("/api/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date: copyDate,
+          courtCost: session.courtCost,
+          shuttleCost: session.shuttleCost,
+          waterCost: session.waterCost,
+          guestFee: session.guestFee,
+          notes: session.notes,
+        }),
+      });
+      if (!res.ok) { toast.error("Lỗi sao chép buổi"); return; }
+      const newSession = await res.json();
+      toast.success("Đã tạo buổi mới");
+      router.push(`/admin/sessions/${newSession.id}`);
+    } finally {
+      setCopying(false);
+    }
+  }
+
   async function deleteSession() {
     if (!confirm("Xoá buổi đánh này? Hành động không thể hoàn tác.")) return;
     setDeleting(true);
@@ -166,12 +194,34 @@ export function AdminSessionClient({ id }: { id: string }) {
           >
             {session.paymentReady ? "✓ QR TT đang mở" : "Mở QR TT"}
           </Button>
+          <Button variant="outline" size="sm" onClick={() => { setCopyDate(new Date().toISOString().slice(0, 10)); setEditingInfo(false); }} >Sao chép buổi</Button>
           <Button variant="outline" size="sm" onClick={() => setEditingInfo(true)}>Sửa thông tin</Button>
           <Button variant="destructive" size="sm" onClick={deleteSession} disabled={deleting}>
             {deleting ? "Đang xoá..." : "Xoá buổi"}
           </Button>
         </div>
       </div>
+
+      {copyDate && (
+        <Card>
+          <CardHeader><CardTitle>Sao chép buổi đánh</CardTitle></CardHeader>
+          <CardContent>
+            <form onSubmit={copySession} className="space-y-4">
+              <p className="text-sm text-gray-500">
+                Sẽ tạo buổi mới với cùng chi phí và ghi chú. Chọn ngày cho buổi mới:
+              </p>
+              <div className="space-y-1">
+                <Label>Ngày buổi mới</Label>
+                <Input type="date" value={copyDate} onChange={e => setCopyDate(e.target.value)} required />
+              </div>
+              <div className="flex gap-2">
+                <Button type="submit" size="sm" disabled={copying}>{copying ? "Đang tạo..." : "Tạo buổi mới"}</Button>
+                <Button type="button" size="sm" variant="ghost" onClick={() => setCopyDate("")}>Huỷ</Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
 
       {editingInfo && (
         <Card>
