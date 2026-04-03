@@ -28,6 +28,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       ...(data.waterCost !== undefined && { waterCost: data.waterCost }),
       ...(data.guestFee !== undefined && { guestFee: data.guestFee }),
       ...(data.notes !== undefined && { notes: data.notes }),
+      ...(data.paymentReady !== undefined && { paymentReady: data.paymentReady }),
     },
   });
   return NextResponse.json(session);

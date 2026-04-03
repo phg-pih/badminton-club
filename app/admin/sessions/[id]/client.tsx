@@ -15,7 +15,7 @@ type Attendance = { id: string; memberId: string; member: { name: string }; paym
 type Guest = { id: string; name: string; quantity: number; notes: string | null; amount: number; status: string; paidAt: string | null; createdAt: string };
 type Session = {
   id: string; date: string; courtCost: number; shuttleCost: number; waterCost: number;
-  guestFee: number; notes: string | null;
+  guestFee: number; notes: string | null; paymentReady: boolean;
   attendances: Attendance[]; guests: Guest[];
 };
 
@@ -28,6 +28,7 @@ export function AdminSessionClient({ id }: { id: string }) {
   const [deleting, setDeleting] = useState(false);
   const [togglingPayment, setTogglingPayment] = useState<string | null>(null);
   const [togglingGuestPayment, setTogglingGuestPayment] = useState<string | null>(null);
+  const [togglingPaymentReady, setTogglingPaymentReady] = useState(false);
 
   useEffect(() => {
     fetch(`/api/sessions/${id}`)
@@ -107,6 +108,23 @@ export function AdminSessionClient({ id }: { id: string }) {
     }
   }
 
+  async function togglePaymentReady() {
+    if (!session) return;
+    setTogglingPaymentReady(true);
+    try {
+      const res = await fetch(`/api/sessions/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentReady: !session.paymentReady }),
+      });
+      if (!res.ok) { toast.error("Lỗi cập nhật"); return; }
+      setSession(s => s ? { ...s, paymentReady: !s.paymentReady } : s);
+      toast.success(!session.paymentReady ? "Đã mở thanh toán QR" : "Đã đóng thanh toán QR");
+    } finally {
+      setTogglingPaymentReady(false);
+    }
+  }
+
   async function deleteSession() {
     if (!confirm("Xoá buổi đánh này? Hành động không thể hoàn tác.")) return;
     setDeleting(true);
@@ -140,6 +158,14 @@ export function AdminSessionClient({ id }: { id: string }) {
           <Link href={`/sessions/${id}`} target="_blank">
             <Button variant="outline" size="sm">Trang điểm danh →</Button>
           </Link>
+          <Button
+            variant={session.paymentReady ? "default" : "outline"}
+            size="sm"
+            onClick={togglePaymentReady}
+            disabled={togglingPaymentReady}
+          >
+            {session.paymentReady ? "✓ QR TT đang mở" : "Mở QR TT"}
+          </Button>
           <Button variant="outline" size="sm" onClick={() => setEditingInfo(true)}>Sửa thông tin</Button>
           <Button variant="destructive" size="sm" onClick={deleteSession} disabled={deleting}>
             {deleting ? "Đang xoá..." : "Xoá buổi"}

@@ -17,6 +17,7 @@ type Session = {
   id: string; date: string;
   courtCost: number; shuttleCost: number; waterCost: number; guestFee: number;
   notes: string | null;
+  paymentReady: boolean;
   attendances: Attendance[];
   guests: Guest[];
 };
@@ -143,7 +144,7 @@ export function AttendanceClient({ session: initial, members, isAdmin = false }:
                       {att?.payment?.status === "paid" && <Badge variant="default" className="text-xs">Đã TT</Badge>}
                     </div>
                     <div className="flex items-center gap-2">
-                      {isIn && att.payment && total > 0 && (
+                      {isIn && att.payment && total > 0 && session.paymentReady && (
                         <Link href={`/sessions/${session.id}/payment/${member.id}`}>
                           <Button variant="outline" size="sm">QR TT</Button>
                         </Link>
@@ -194,7 +195,7 @@ export function AttendanceClient({ session: initial, members, isAdmin = false }:
                           {(g.amount || session.guestFee * g.quantity).toLocaleString("vi-VN", { maximumFractionDigits: 0 })}đ
                         </span>
                       )}
-                      {g.status !== "paid" && (g.amount > 0 || session.guestFee > 0) && (
+                      {g.status !== "paid" && (g.amount > 0 || session.guestFee > 0) && session.paymentReady && (
                         <Link href={`/sessions/${session.id}/guest-payment/${g.id}`}>
                           <Button variant="outline" size="sm">QR TT</Button>
                         </Link>
