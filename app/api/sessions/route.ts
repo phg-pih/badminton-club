@@ -3,11 +3,21 @@ import { getAdminSession } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
 export async function GET() {
-  const sessions = await prisma.session.findMany({
-    orderBy: { date: "desc" },
-    include: { _count: { select: { attendances: true, guests: true } } },
-  });
-  return NextResponse.json(sessions);
+  try {
+    const sessions = await prisma.session.findMany({
+      orderBy: { date: "desc" },
+      include: { _count: { select: { attendances: true, guests: true } } },
+    });
+    return NextResponse.json(sessions);
+  } catch (e: unknown) {
+    const err = e as Error & { code?: string; cause?: unknown };
+    return NextResponse.json({
+      error: String(e),
+      code: err.code,
+      cause: String(err.cause),
+      stack: err.stack?.split("\n").slice(0, 5),
+    }, { status: 500 });
+  }
 }
 
 export async function POST(request: NextRequest) {

@@ -1,11 +1,11 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
-const ADMIN_USER = process.env.BCLB_ADMIN_USER ?? "admin";
-const ADMIN_PASS = process.env.BCLB_ADMIN_PASS ?? "P@ssw0rd";
+const ADMIN_USER = (process.env.BCLB_ADMIN_USER ?? "admin").trim();
+const ADMIN_PASS = (process.env.BCLB_ADMIN_PASS ?? "P@ssw0rd").trim();
 const COOKIE_NAME = "admin_session";
 const secret = new TextEncoder().encode(
-  process.env.BCLB_JWT_SECRET ?? "fallback-secret-change-in-production"
+  (process.env.BCLB_JWT_SECRET ?? "fallback-secret-change-in-production").trim()
 );
 
 export async function signAdminToken(): Promise<string> {

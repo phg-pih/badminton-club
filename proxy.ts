@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
 const secret = new TextEncoder().encode(
-  process.env.BCLB_JWT_SECRET ?? "fallback-secret-change-in-production"
+  (process.env.BCLB_JWT_SECRET ?? "fallback-secret-change-in-production").trim()
 );
 
 export async function proxy(request: NextRequest) {
