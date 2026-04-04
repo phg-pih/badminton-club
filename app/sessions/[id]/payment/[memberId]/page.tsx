@@ -12,19 +12,35 @@ export const dynamic = "force-dynamic";
 export default async function PaymentPage({ params }: { params: Promise<{ id: string; memberId: string }> }) {
   const { id: sessionId, memberId } = await params;
 
-  const payment = await prisma.payment.findFirst({
-    where: { sessionId, memberId },
-    include: {
-      member: true,
-      attendance: { include: { session: true } },
-    },
-  });
+  const [payment, previousDebts] = await Promise.all([
+    prisma.payment.findFirst({
+      where: { sessionId, memberId },
+      include: {
+        member: true,
+        attendance: { include: { session: true } },
+      },
+    }),
+    prisma.$queryRaw<{ id: string }[]>`SELECT id FROM Session WHERE paymentReady = 1`.then(async sessions => {
+      const ids = sessions.map(s => s.id).filter(sid => sid !== sessionId);
+      if (ids.length === 0) return [];
+      return prisma.payment.findMany({
+        where: { memberId, status: "pending", sessionId: { in: ids } },
+        include: { attendance: { include: { session: true } } },
+        orderBy: { attendance: { session: { date: "asc" } } },
+      });
+    }),
+  ]);
 
   if (!payment) notFound();
 
   const session = payment.attendance.session;
   const dateStr = new Date(session.date).toLocaleDateString("vi-VN", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
-  const qrUrl = payment.sePayRef ? buildSePayQrUrl(payment.amount, payment.sePayRef) : null;
+
+  const totalDebt = payment.status === "pending"
+    ? payment.amount + previousDebts.reduce((sum, p) => sum + p.amount, 0)
+    : payment.amount;
+
+  const qrUrl = payment.sePayRef ? buildSePayQrUrl(totalDebt, payment.sePayRef) : null;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
@@ -41,11 +57,27 @@ export default async function PaymentPage({ params }: { params: Promise<{ id: st
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="text-center">
-              <p className="text-sm text-gray-500">Số tiền</p>
+              <p className="text-sm text-gray-500">Tổng số tiền</p>
               <p className="text-3xl font-bold text-green-600">
-                {payment.amount.toLocaleString("vi-VN", { maximumFractionDigits: 0 })}đ
+                {totalDebt.toLocaleString("vi-VN", { maximumFractionDigits: 0 })}đ
               </p>
             </div>
+
+            {payment.status === "pending" && previousDebts.length > 0 && (
+              <div className="text-sm space-y-1 border rounded-md p-3 bg-gray-50">
+                <p className="font-medium text-gray-700 mb-2">Chi tiết:</p>
+                {previousDebts.map(p => (
+                  <div key={p.id} className="flex justify-between text-gray-500">
+                    <span>{new Date(p.attendance.session.date).toLocaleDateString("vi-VN", { day: "numeric", month: "numeric" })} (nợ cũ)</span>
+                    <span>{p.amount.toLocaleString("vi-VN", { maximumFractionDigits: 0 })}đ</span>
+                  </div>
+                ))}
+                <div className="flex justify-between text-gray-700 font-medium pt-1 border-t">
+                  <span>{new Date(session.date).toLocaleDateString("vi-VN", { day: "numeric", month: "numeric" })} (buổi này)</span>
+                  <span>{payment.amount.toLocaleString("vi-VN", { maximumFractionDigits: 0 })}đ</span>
+                </div>
+              </div>
+            )}
 
             <div className="text-center">
               <Badge variant={payment.status === "paid" ? "default" : "secondary"} className="text-sm">

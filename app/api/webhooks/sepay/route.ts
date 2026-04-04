@@ -58,8 +58,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  await prisma.payment.update({
-    where: { id: payment.id },
+  // Mark all pending payments for this member where session is paymentReady
+  const paymentReadySessions = await prisma.$queryRaw<{ id: string }[]>`SELECT id FROM Session WHERE paymentReady = 1`;
+  const readySessionIds = paymentReadySessions.map(s => s.id);
+  await prisma.payment.updateMany({
+    where: { memberId: payment.memberId, status: "pending", sessionId: { in: readySessionIds } },
     data: { status: "paid", paidAt: new Date() },
   });
 

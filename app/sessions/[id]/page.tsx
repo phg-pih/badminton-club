@@ -18,11 +18,32 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
   ]);
   if (!session) notFound();
 
+  const memberIds = session.attendances.map(a => a.memberId);
+  const readySessions = await prisma.$queryRaw<{ id: string }[]>`SELECT id FROM Session WHERE paymentReady = 1`;
+  const readySessionIds = readySessions.map(s => s.id);
+
+  const allPendingPayments = memberIds.length > 0 && readySessionIds.length > 0
+    ? await prisma.payment.findMany({
+        where: {
+          memberId: { in: memberIds },
+          status: "pending",
+          sessionId: { in: readySessionIds },
+        },
+        select: { memberId: true, amount: true },
+      })
+    : [];
+
+  const memberDebts: Record<string, number> = {};
+  for (const p of allPendingPayments) {
+    memberDebts[p.memberId] = (memberDebts[p.memberId] ?? 0) + p.amount;
+  }
+
   return (
     <AttendanceClient
       session={JSON.parse(JSON.stringify(session))}
       members={JSON.parse(JSON.stringify(members))}
       isAdmin={!!admin}
+      memberDebts={memberDebts}
     />
   );
 }

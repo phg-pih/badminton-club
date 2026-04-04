@@ -29,7 +29,7 @@ function isGameDay(dateStr: string): boolean {
   return new Date(dateStr).toISOString().slice(0, 10) === todayVNT;
 }
 
-export function AttendanceClient({ session: initial, members, isAdmin = false }: { session: Session; members: Member[]; isAdmin?: boolean }) {
+export function AttendanceClient({ session: initial, members, isAdmin = false, memberDebts = {} }: { session: Session; members: Member[]; isAdmin?: boolean; memberDebts?: Record<string, number> }) {
   const [session, setSession] = useState<Session>(initial);
   const [loadingMember, setLoadingMember] = useState<string | null>(null);
   const locked = !isAdmin && isGameDay(session.date);
@@ -149,8 +149,13 @@ export function AttendanceClient({ session: initial, members, isAdmin = false }:
                       {att?.payment?.status === "paid" && <Badge variant="default" className="text-xs">Đã TT</Badge>}
                     </div>
                     <div className="flex items-center gap-2">
-                      {isIn && att.payment && total > 0 && session.paymentReady && (
-                        <Link href={`/sessions/${session.id}/payment/${member.id}`}>
+                      {isIn && att.payment && total > 0 && att.payment.status === "pending" && session.paymentReady && (
+                        <Link href={`/sessions/${session.id}/payment/${member.id}`} className="flex items-center gap-1">
+                          {(memberDebts[member.id] ?? 0) > 0 && (
+                            <span className="text-xs font-medium text-orange-600">
+                              Tiền nợ: {(memberDebts[member.id]).toLocaleString("vi-VN", { maximumFractionDigits: 0 })}đ
+                            </span>
+                          )}
                           <Button variant="outline" size="sm">QR TT</Button>
                         </Link>
                       )}
