@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const { code, content, transferType } = body;
+  const { code, content, transferType, transferAmount } = body;
   if (transferType !== "in") return NextResponse.json({ ok: true });
 
   // Try exact match on code or content, then substring fallback
@@ -51,9 +51,15 @@ export async function POST(request: NextRequest) {
       guest = pendingGuests.find(g => g.sePayRef && upper.includes(g.sePayRef)) ?? null;
     }
     if (!guest) return NextResponse.json({ ok: true });
+
+    const remainAmount = Math.max(0, guest.amount - transferAmount);
     await prisma.guest.update({
       where: { id: guest.id },
-      data: { status: "paid", paidAt: new Date() },
+      data: { 
+        status: remainAmount > 0 ? "partial paid" : "paid",
+        paidAt: new Date(),
+        amount: remainAmount
+      },
     });
     return NextResponse.json({ ok: true });
   }

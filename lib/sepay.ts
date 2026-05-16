@@ -11,15 +11,13 @@ export function buildSePayQrUrl(amount: number, description: string): string {
   return `https://qr.sepay.vn/img?${params.toString()}`;
 }
 
-export function buildPaymentRef(sessionId: string, memberId: string): string {
-  // Short 6-char slices to keep the transfer description short
-  const s = sessionId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 6).toUpperCase();
-  const m = memberId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 6).toUpperCase();
-  return `CLB${s}${m}`;
-}
+import { createHash } from "crypto";
 
-export function parsePaymentRef(ref: string): { sessionSlice: string; memberSlice: string } | null {
-  const match = ref.match(/^CLB([A-Z0-9]{6})([A-Z0-9]{6})$/);
-  if (!match) return null;
-  return { sessionSlice: match[1], memberSlice: match[2] };
+export function buildPaymentRef(sessionId: string, memberId: string): string {
+  const hash = createHash("sha256")
+    .update(`${sessionId}:${memberId}`)
+    .digest("hex")
+    .toUpperCase()
+    .slice(0, 10);
+  return `CLB${hash}`;
 }

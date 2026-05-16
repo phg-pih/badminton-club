@@ -19,6 +19,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (!(await getAdminSession())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
   const data = await request.json();
+
+  const costChanged =
+    data.courtCost !== undefined || data.shuttleCost !== undefined || data.waterCost !== undefined;
+
   const session = await prisma.session.update({
     where: { id },
     data: {
@@ -31,6 +35,27 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       ...(data.paymentReady !== undefined && { paymentReady: data.paymentReady }),
     },
   });
+
+  if (costChanged) {
+    const attendances = await prisma.attendance.findMany({
+      where: { sessionId: id },
+      include: { payment: true },
+    });
+    const totalCost = session.courtCost + session.shuttleCost + session.waterCost;
+    const count = attendances.length;
+    if (count > 0 && totalCost > 0) {
+      const amountPerPerson = totalCost / count;
+      for (const att of attendances) {
+        if (att.payment && att.payment.status !== "paid") {
+          await prisma.payment.update({
+            where: { id: att.payment.id },
+            data: { amount: amountPerPerson },
+          });
+        }
+      }
+    }
+  }
+
   return NextResponse.json(session);
 }
 
